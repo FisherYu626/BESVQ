@@ -1,0 +1,32 @@
+pragma solidity <0.6.0;
+
+contract write {
+    // mapping(int => int) public blockindex;
+    
+    int public recordtoken;
+    
+    function set(int num) public{
+        recordtoken=num;
+    }
+    
+    
+    // function gettoken(int token) public{
+    //     recordtoken = blockindex[token];
+    // }
+
+    function get()public view returns (int){
+        return  recordtoken;
+    }
+}
+    
+
+0x82ad8f5145b49fed9025e249b28ec5ae7f67cb89
+
+
+0x2a683ea45687fa6ca9b32bcac276e8dc6de52008
+
+Gas estimation errored with the following message (see below). The transaction execution will likely fail. Do you want to force sending? 
+VM Exception while processing transaction: revert
+
+
+https://ethereum.github.io/browser-solidity/
