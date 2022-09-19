@@ -1,3 +1,4 @@
+from cgi import print_form
 import numpy as np
 import time
 import sys
@@ -15,8 +16,7 @@ import string
 from web3 import Web3
 import json
 from web3.middleware import geth_poa_middleware
-import GetOBRC
-
+from GetOBRC import GetOBRC
 sys.setrecursionlimit(10000) # 设置递归深度
 
 w3 = Web3(Web3.HTTPProvider('http://127.0.0.1:8545'))
@@ -26,6 +26,7 @@ print(w3.eth.blockNumber)
 
 #初始设置
 lamda = 16
+d = 4
 #私钥
 Ks=hmac.new(b'chen').digest()
 Ke = os.urandom(16)
@@ -111,7 +112,7 @@ def Build_index(Kw_File_Use):
 
 			aesKe = AES.new(Ke,model)
 			#id||c 先拼接 再置为长度16
-			id_str = (id+str(c)).zfill(16)
+			id_str = (id+"|"+str(c)).zfill(16)
 			id_bytes = id_str.encode('utf-8')
 			Vc = aesKe.encrypt(id_bytes)
 
@@ -157,12 +158,14 @@ def Update_index(subkey_id_file,server_index,client_index):
 			# print(h)
 		gama_x = os.urandom(16)
 		addr_x = aesKw.encrypt(gama_x)
-		Px = bytes(a ^ b for a, b in zip(addr_x, gama_x))
+		Px = bytes(a ^ b for a, b in zip(addr_x, gama))
 		aesKe = AES.new(Ke,model)
-		id_str = (subkey_id_file[i]+str(c)).zfill(16)
+		id_str = (subkey_id_file[i]+"|"+str(c)).zfill(16)
 		id_bytes = id_str.encode('utf-8')
 		Vx = aesKe.encrypt(id_bytes)
-		
+		# print("inserted Px")
+		# print(Px)
+		# print(Vx)
 		server_index[addr_x] = [Px,Vx]
 		Hvx = Web3.keccak(Vx)
 		if c==0:
@@ -180,7 +183,42 @@ def Update_index(subkey_id_file,server_index,client_index):
 
 	return blockchain_index	
 
+def Generate_SearchTokens(p,BRC_d):
+	Wset = []
+	St = []
+	dbits = 0
+	Wset = GetOBRC(p,BRC_d)
+	# for i in Wset:
+	# 	print(i)
+	
+	#d
 
+	for sub_key in Wset:
+		c,v,gama,h = client_index[sub_key]
+		# print(c)
+		# print(v)
+		# print(gama)
+		# print(h)
+
+		#here needs d ^h
+		if dbits == 0:
+			dbits = h
+		else:
+			dbits = bytes(a ^ b for a, b in zip(dbits, h))
+
+		w_string  = sub_key.zfill(16)
+		w_bits = w_string.encode('utf-8')
+		aes = AES.new(Ks,model)
+		Kw = aes.encrypt(w_bits)
+
+		WandV = (sub_key+str(v))
+		WandV_bytes = WandV.encode('utf-8')
+		Hwv = hmac.new(WandV_bytes)
+		lw = Hwv.digest()
+		St.append([Kw,gama,lw])
+
+
+	return St,dbits
 
 
 
@@ -557,7 +595,7 @@ print(str(time_sum)+' s')
 
 
 
-####################################################################update period
+###################################################################update period
 print("addd files!!!!!!!!!!!!!!!!!!!!!!!!!!")
 print("now the s includes:")
 print(client_index)
@@ -573,6 +611,7 @@ subs2 = os.listdir(updateFileDir)
 for sub in subs2:
 	Update_Kw_file = {}
 	fileParser(updateFileDir,sub,Update_Kw_file)
+	print("here is Up kw file")
 	print(Update_Kw_file)
 	#将dict{key:[]}转为dict{key:value}
 	subkey_id_file = {}
@@ -630,3 +669,59 @@ for sub in subs2:
 # time_end = time.time()  # 记录结束时间
 # time_sum = time_end - time_start  # 计算的时间差为程序的执行时间，单位为秒/s
 # print(str(time_sum)+' s')
+
+
+p = ['1','3']
+BRC_d = 4
+
+St,dbits = Generate_SearchTokens(p,BRC_d)
+for i in St:
+	print(i)
+#here needs send st、payment.. to block_chain
+
+#------------------------Cloud Search results------------------------------
+c = []
+
+for entry in St:
+	Kw = entry[0]
+	gama = entry[1]
+	lw = entry[2]
+	aesKw = AES.new(Kw,model)
+	addr = aesKw.encrypt(gama)
+	p,v = server_index[addr]
+	while(1):
+		print(addr)
+		c.append(v)
+		gama1 = bytes(a ^ b for a, b in zip(addr,p))
+
+		addr = aesKw.encrypt(gama1)
+		if(server_index.get(addr) == None): break
+		p,v = server_index[addr]
+
+
+#-----------------------Verify Results---------------------------------------
+vo = 0
+for vi in c:
+	if vo ==0:
+		vo = Web3.keccak(vi)
+	else:
+		Hvi = Web3.keccak(vi)
+		vo = bytes(a ^ b for a, b in zip(vo,Hvi))
+print("vo is")
+print(vo)
+print("dbits is")
+print(dbits)
+ids = []
+if vo == dbits:
+	print('success')
+	for ci in c:
+		aesKe = AES.new(Ke,model)
+		id = aesKe.decrypt(ci)
+		id_str = id.decode('utf-8')
+		print(id_str)
+		id0 = id_str.split('|')[0].lstrip('0')
+		if(ids.count(id0)==0):
+			ids.append(id0)
+
+print(ids)
+		

@@ -1,8 +1,5 @@
 
 
-d = 3
-
-
 def strIsSmaller(abit,bbit):
     sabit = abit
     sbbit = bbit
@@ -30,12 +27,13 @@ def stradd(abit,num):
     sabit = bin(a)[2:]
     while(len(sabit)<sabit_len):
         sabit = '0'+sabit
-    print(sabit)
+    # print(sabit)
     return '#'+sabit
 
-def GetOBRC(a,b):
+def GetOBRC(p,d):
     res = []
-
+    a = p[0]
+    b = p[1]
     abit = bin(int(a,10))
     bbit = bin(int(b,10))
     abit = abit[2:]
@@ -61,8 +59,9 @@ def GetOBRC(a,b):
     return res
 
 
-
-res = GetOBRC('1','4')
-print(len(res))
-for i in res:
-    print(i)
+if __name__ == "__main__":
+    p = ['0','4']
+    res = GetOBRC(p,4)
+    print(len(res))
+    for i in res:
+        print(i)
